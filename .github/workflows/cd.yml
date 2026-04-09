@@ -19,9 +19,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Scan sécurité
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          scan-ref: '${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Check for critical vulnerabilities
         run: |
-          echo "Scan OK"
+          if grep -q '"severity": "CRITICAL"' trivy-results.sarif; then
+            echo "Critical vulnerabilities found! Failing the deployment."
+            exit 1
+          else
+            echo "No critical vulnerabilities found."
+          fi
 
   # =========================
   # JOB 2 : DEPLOY
@@ -51,3 +73,26 @@ jobs:
         run: |
           docker run -d -p 80:80 --name intranet \
           $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [scan, deploy]
+    if: always()
+
+    steps:
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: CD Pipeline Result - Intranet New Deal
+          body: |
+            The CD pipeline for Intranet New Deal has completed.
+
+            Status: ${{ job.status }}
+
+            Check the GitHub Actions logs for details.
+          to: moisawade@gmail.com
+          from: GitHub Actions <noreply@github.com>
