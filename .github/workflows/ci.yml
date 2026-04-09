@@ -41,6 +41,17 @@ jobs:
     needs: scan
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login DockerHub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image AGAIN
+        run: |
+          docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+
       - name: Push Docker image
         run: |
           docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
