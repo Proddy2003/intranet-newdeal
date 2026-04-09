@@ -27,7 +27,7 @@ jobs:
   # JOB 2 : DEPLOY
   # =========================
   deploy:
-    runs-on: runner_prod   # ⚠️ ou ubuntu-latest si tu n’as pas de runner
+    runs-on: ubuntu-latest   # ✅ correction ici
     needs: scan
 
     steps:
