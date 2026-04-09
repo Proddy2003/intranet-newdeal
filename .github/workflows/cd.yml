@@ -1,0 +1,43 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - prod
+
+env:
+  IMAGE_NAME: intranet-newdeal
+  IMAGE_TAG: latest
+  DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scan sécurité
+        run: |
+          echo "Scan OK"
+
+  deploy:
+    runs-on: runner_prod
+    needs: scan
+
+    steps:
+      - name: Pull Docker image
+        run: |
+          docker pull $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+
+      - name: Stop container
+        run: |
+          docker stop intranet || true
+
+      - name: Remove container
+        run: |
+          docker rm intranet || true
+
+      - name: Run container
+        run: |
+          docker run -d -p 80:80 --name intranet \
+          $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG

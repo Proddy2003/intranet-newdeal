@@ -1,0 +1,46 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  IMAGE_NAME: intranet-newdeal
+  IMAGE_TAG: latest
+  DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login DockerHub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+
+  scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Scan sécurité
+        run: |
+          echo "Scan OK"
+
+  push:
+    runs-on: ubuntu-latest
+    needs: scan
+
+    steps:
+      - name: Push Docker image
+        run: |
+          docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
